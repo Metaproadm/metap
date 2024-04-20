@@ -13,13 +13,14 @@ API_KEY = st.text_input("Enter your DeepInfra API Key:", type="password")
 # Input for the image URL
 image_url = st.text_input("Enter the URL of the image:")
 
+# File uploader allows the user to upload an image
+# uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
-
-#def encode_image_to_base64(image):
-    #"""Encode image to base64."""
-    #buffered = BytesIO()
-    #image.save(buffered, format="JPEG")
-    #return base64.b64encode(buffered.getvalue()).decode("utf-8") 
+#d ef encode_image_to_base64(image):
+    # """Encode image to base64."""
+    # buffered = BytesIO()
+    # image.save(buffered, format="JPEG")
+    # return base64.b64encode(buffered.getvalue()).decode("utf-8") 
 
 def call_deepinfra_api(base64_image, api_key):
     """Send the base64 encoded image to DeepInfra for inference."""
