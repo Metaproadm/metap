@@ -1,72 +1,72 @@
 import streamlit as st
-import os
 from PIL import Image
-import google.generativeai as genai
+import base64
+import requests
+import json
+# from io import BytesIO
 
-st.title('Image Captioning and Tagging')
+# Setting up the title of the application
+st.title('Art Style Explorer')
 
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
+# Input for the API key
+API_KEY = st.text_input("Enter your DeepInfra API Key:", type="password")
 
-API_KEY = st.text_input("Enter your API Key:&nbsp;&nbsp; &nbsp;&nbsp; Get your Google Studio API key from [here](https://makersuite.google.com/app/apikey)", type="password")
-if uploaded_file is not None:
-    if st.button('Upload'):
-        if API_KEY.strip() == '':
-            st.error('Enter a valid API key')
-        else:
-            file_path = os.path.join("temp", uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getvalue())
-            img = Image.open(file_path)
-            try:
-                genai.configure(api_key=API_KEY)
-                model = genai.GenerativeModel('gemini-pro-vision')
-                caption = model.generate_content(["Write a caption for the image in english",img])
-                tags=model.generate_content(["Generate 5 hash tags for the image in a line in english",img])
-                st.image(img, caption=f"Caption: {caption.text}")
-                st.write(f"Tags: {tags.text}")
-            except Exception as e:
-                error_msg = str(e)
-                if "API_KEY_INVALID" in error_msg:
-                    st.error("Invalid API Key. Please enter a valid API Key.")
-                else:
-                    st.error(f"Failed to configure API due to {error_msg}")
-footer="""
-  <style>
-        a:link, a:visited {
-            color: blue;
-            text-decoration: dotted; /* Remove underline */
-        }
+# Input for the image URL
+image_url = st.text_input("Enter the URL of the image:")
 
-        a:hover, a:active {
-            color: skyblue;
-        }
-        .footer .p{
-            font-size:10px;
-        }
+# Input for the prompt sent to the API
+prompt = st.text_input("What would you like the model to tell you from this image?")
 
-        /* Footer */
-        .footer {
-            position:fixed;
-            left: 0;
-            bottom: 0;
-            width: 100%;
-            height:10%;
-            font-size:15px;
-            color: white; 
-            text-align: center;
-            padding: 10px 0; 
-        }
-        .footer p{
-            font-size:20px;
-        }
+# File uploader allows the user to upload an image
+# uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
-        .footer a:hover {
-            color: white;
-        }
-    </style>
+#d ef encode_image_to_base64(image):
+    # """Encode image to base64."""
+    # buffered = BytesIO()
+    # image.save(buffered, format="JPEG")
+    # return base64.b64encode(buffered.getvalue()).decode("utf-8") 
 
-    <div class="footer">
-        <p>Developed with ❤ by <a href="https://www.linkedin.com/in/sgvkamalakar" target="_blank">sgvkamalakar</a></p>
-    </div>
-"""
-st.markdown(footer,unsafe_allow_html=True)
+def call_deepinfra_api(image_url, prompt, api_key):
+    """Send the image URL and prompt to DeepInfra for inference."""
+    url = "https://api.deepinfra.com/v1/openai/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+     }
+    data = {
+        "model": "llava-hf/llava-1.5-7b-hf",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_url
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            }
+        ]
+    }
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        st.error(f"API request failed with status code: {response.status_code} and message: {response.text}")
+        return None
+
+if image_url and API_KEY and prompt:
+    if st.button('Analyze Image'):
+        try:
+            result = call_deepinfra_api(image_url, API_KEY, prompt)
+            if result:
+                # Convert the dictionary to JSON formatted string and display it
+                json_result = json.dumps(result, indent=2)  # Beautify the JSON response
+                st.json(json_result)  # Use st.json to render the JSON in the UI
+        except Exception as e:
+            st.error(f"Failed to process image due to: {str(e)}")
